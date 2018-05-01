@@ -1,15 +1,17 @@
 package test.twistypotato;
 
+import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
-import android.support.v7.widget.GridLayoutManager;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.TextView;
 
 import com.google.firebase.auth.FirebaseAuth;
@@ -18,17 +20,10 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
-import test.twistypotato.dummy.DummyContent;
-import test.twistypotato.dummy.DummyContent.DummyItem;
-
 import java.util.ArrayList;
 import java.util.List;
 
 public class ItemFragment extends Fragment {
-
-    private int mColumnCount = 1;
-
-    private OnListFragmentInteractionListener mListener;
 
     public ItemFragment() {
     }
@@ -56,7 +51,13 @@ public class ItemFragment extends Fragment {
 //        list.add(new CartItem("test2", 30, 1));
 //        list.add(new CartItem("test3", 30, 1));
 
-        final MyItemRecyclerViewAdapter adapter = new MyItemRecyclerViewAdapter(list);
+        final MyItemRecyclerViewAdapter adapter = new MyItemRecyclerViewAdapter(list, getActivity());
+
+        final ProgressDialog progressDialog = new ProgressDialog(getActivity());
+        progressDialog.setCancelable(false);
+        progressDialog.setCanceledOnTouchOutside(false);
+        progressDialog.setMessage("Loading, Please Wait");
+        progressDialog.show();
 
         FirebaseDatabase.getInstance().getReference("users")
                 .child(FirebaseAuth.getInstance().getCurrentUser().getUid())
@@ -64,6 +65,7 @@ public class ItemFragment extends Fragment {
                 .addValueEventListener(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot dataSnapshot) {
+                        progressDialog.dismiss();
                         list.clear();
                         int total = 0;
 
@@ -86,6 +88,23 @@ public class ItemFragment extends Fragment {
                 });
 
         recyclerView.setAdapter(adapter);
+
+        Button buy_now = view.findViewById(R.id.buy_now);
+        buy_now.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                new AlertDialog.Builder(getActivity())
+                        .setTitle("Your order has been placed")
+                        .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                dialogInterface.dismiss();
+                                getFragmentManager().beginTransaction().replace(R.id.content_main, new HomeFragment()).commitAllowingStateLoss();
+                            }
+                        }).show();
+            }
+        });
+
         return view;
     }
 
@@ -95,14 +114,4 @@ public class ItemFragment extends Fragment {
         super.onAttach(context);
     }
 
-    @Override
-    public void onDetach() {
-        super.onDetach();
-        mListener = null;
-    }
-
-    public interface OnListFragmentInteractionListener {
-        // TODO: Update argument type and name
-        void onListFragmentInteraction(DummyItem item);
-    }
 }

@@ -65,18 +65,19 @@ public class MainActivity extends AppCompatActivity
                             .child(firebaseAuth.getCurrentUser().getUid())
                             .child("name")
                             .addValueEventListener(new ValueEventListener() {
-                        @Override
-                        public void onDataChange(DataSnapshot dataSnapshot) {
-                            header_name.setText(dataSnapshot.getValue().toString());
-                        }
+                                @Override
+                                public void onDataChange(DataSnapshot dataSnapshot) {
+                                    if (dataSnapshot.getValue() != null)
+                                        header_name.setText(dataSnapshot.getValue().toString());
+                                }
 
-                        @Override
-                        public void onCancelled(DatabaseError databaseError) {
+                                @Override
+                                public void onCancelled(DatabaseError databaseError) {
 
-                        }
-                    });
+                                }
+                            });
 
-                    getSupportFragmentManager().beginTransaction().replace(R.id.content_main, new HomeFragment()).commit();
+                    getSupportFragmentManager().beginTransaction().replace(R.id.content_main, new HomeFragment()).commitAllowingStateLoss();
                 }
             }
         });

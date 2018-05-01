@@ -1,11 +1,13 @@
 package test.twistypotato;
 
+import android.app.ProgressDialog;
+import android.content.Context;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -16,17 +18,16 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
-import test.twistypotato.ItemFragment.OnListFragmentInteractionListener;
-import test.twistypotato.dummy.DummyContent.DummyItem;
-
 import java.util.List;
 
 public class MyItemRecyclerViewAdapter extends RecyclerView.Adapter<MyItemRecyclerViewAdapter.ViewHolder> {
 
     private final List<CartItem> mValues;
+    private Context context;
 
-    MyItemRecyclerViewAdapter(List<CartItem> items) {
+    MyItemRecyclerViewAdapter(List<CartItem> items, Context context) {
         mValues = items;
+        this.context = context;
     }
 
     @Override
@@ -37,19 +38,19 @@ public class MyItemRecyclerViewAdapter extends RecyclerView.Adapter<MyItemRecycl
     }
 
     @Override
-    public void onBindViewHolder(final ViewHolder holder, int position) {
+    public void onBindViewHolder(final ViewHolder holder, final int position) {
         holder.mItem = mValues.get(position);
         holder.titleView.setText(mValues.get(position).title);
         holder.priceView.setText((mValues.get(position).price * mValues.get(position).quantity) + "");
         holder.quantitySpinner.setSelection(mValues.get(position).quantity - 1);
 
+        final DatabaseReference ref = FirebaseDatabase.getInstance().getReference("users")
+                .child(FirebaseAuth.getInstance().getCurrentUser().getUid())
+                .child("cart");
+
         holder.quantitySpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-
-                final DatabaseReference ref = FirebaseDatabase.getInstance().getReference("users")
-                        .child(FirebaseAuth.getInstance().getCurrentUser().getUid())
-                        .child("cart");
 
                 ref.addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
@@ -73,6 +74,38 @@ public class MyItemRecyclerViewAdapter extends RecyclerView.Adapter<MyItemRecycl
 
             }
         });
+
+        holder.remove.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                final ProgressDialog progressDialog = new ProgressDialog(context);
+                progressDialog.setCancelable(false);
+                progressDialog.setCanceledOnTouchOutside(false);
+                progressDialog.setMessage("Loading, Please Wait");
+                progressDialog.show();
+                ref.orderByChild("title").equalTo(holder.mItem.title).addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot) {
+                        for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                            if (snapshot.child("title").getValue().toString().equals(holder.mItem.title)) {
+                                ref.child(snapshot.getKey()).removeValue(new DatabaseReference.CompletionListener() {
+                                    @Override
+                                    public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
+                                        progressDialog.dismiss();
+                                    }
+                                });
+                                break;
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+
+                    }
+                });
+            }
+        });
     }
 
     @Override
@@ -84,12 +117,14 @@ public class MyItemRecyclerViewAdapter extends RecyclerView.Adapter<MyItemRecycl
         final TextView titleView, priceView;
         Spinner quantitySpinner;
         CartItem mItem;
+        Button remove;
 
         ViewHolder(View view) {
             super(view);
             titleView = view.findViewById(R.id.title);
             priceView = view.findViewById(R.id.price);
             quantitySpinner = view.findViewById(R.id.quantitySpinner);
+            remove = view.findViewById(R.id.remove);
         }
 
     }
